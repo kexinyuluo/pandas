@@ -2601,7 +2601,7 @@ class Index(IndexOpsMixin, PandasObject):
 
     @final
     def _validate_sort_keyword(self, sort):
-        if sort not in [None, False]:
+        if sort not in [None, False, True]:
             raise ValueError(
                 "The 'sort' keyword only takes the values of "
                 f"None or False; {sort} was passed."
@@ -2661,6 +2661,9 @@ class Index(IndexOpsMixin, PandasObject):
         self._validate_sort_keyword(sort)
         self._assert_can_do_setop(other)
         other = ensure_index(other)
+
+        if sort == True:
+            sort = None
 
         if not self._can_union_without_object_cast(other):
             return self._union_incompatible_dtypes(other, sort=sort)
@@ -2790,6 +2793,9 @@ class Index(IndexOpsMixin, PandasObject):
         self._assert_can_do_setop(other)
         other = ensure_index(other)
 
+        if sort == True:
+            sort = None
+
         if self.equals(other):
             return self._get_reconciled_name_object(other)
 
@@ -2867,6 +2873,9 @@ class Index(IndexOpsMixin, PandasObject):
         self._validate_sort_keyword(sort)
         self._assert_can_do_setop(other)
 
+        if sort == True:
+            sort = None
+
         if self.equals(other):
             # pass an empty np.ndarray with the appropriate dtype
             return self._shallow_copy(self._data[:0])
@@ -2938,6 +2947,10 @@ class Index(IndexOpsMixin, PandasObject):
         self._validate_sort_keyword(sort)
         self._assert_can_do_setop(other)
         other, result_name_update = self._convert_can_do_setop(other)
+
+        if sort == True:
+            sort = None
+
         if result_name is None:
             result_name = result_name_update
 
@@ -5200,8 +5213,13 @@ class Index(IndexOpsMixin, PandasObject):
         # We are a plain index here (sub-class override this method if they
         # wish to have special treatment for floats/ints, e.g. Float64Index and
         # datetimelike Indexes
-        # reject them, if index does not contain label
-        if (is_float(label) or is_integer(label)) and label not in self.values:
+        # reject them
+        if is_float(label):
+            self._invalid_indexer("slice", label)
+
+        # we are trying to find integer bounds on a non-integer based index
+        # this is rejected (generally .loc gets you here)
+        elif is_integer(label):
             self._invalid_indexer("slice", label)
 
         return label
